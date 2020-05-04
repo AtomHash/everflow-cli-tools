@@ -1,0 +1,24 @@
+{
+  "name": "@everflow-cli/tools",
+  "version": "0.1.0",
+  "description": "Scripts and other useful tools for everflow development.",
+  "main": "./index.js",
+  "author": "AtomHash",
+  "dependencies": {
+    "fs-extra": "^9.0.0",
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AtomHash/everflow-cli-tools.git"
+  },
+  "keywords": [
+    "everflow",
+    "config",
+    "webpack"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AtomHash/everflow-cli-tools/issues"
+  },
+  "homepage": "https://github.com/AtomHash/everflow-cli-tools#readme"
+}
