@@ -1,11 +1,11 @@
 {
   "name": "@everflow-cli/tools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Scripts and other useful tools for everflow development.",
   "main": "./index.js",
   "author": "AtomHash",
   "dependencies": {
-    "fs-extra": "^9.0.0",
+    "fs-extra": "^9.0.0"
   },
   "repository": {
     "type": "git",
@@ -13,6 +13,9 @@
   },
   "keywords": [
     "everflow",
+    "cli",
+    "vuejs",
+    "plugin",
     "config",
     "webpack"
   ],
