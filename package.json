@@ -1,6 +1,6 @@
 {
   "name": "@everflow-cli/tools",
-  "version": "0.1.2",
+  "version": "1.0.0-beta.1",
   "description": "Scripts and other useful tools for everflow development.",
   "main": "./index.js",
   "author": "AtomHash",
