@@ -1,92 +1,82 @@
 var path = require('path');
 var fs = require('fs-extra');
+var camelCase = require('./camel-case')
 
-function camelCase(str){
-  let arr = str.split('-');
-  let capital = arr.map((item, index) => index ? item.charAt(0).toUpperCase() + item.slice(1).toLowerCase() : item);
-  // ^-- change here.
-  let capitalString = capital.join("");
-  return capitalString;
-}
 
 // Generate Module routes.ts
 modulesPath = "./src/modules";
 moduleRoutes = path.join(path.resolve(modulesPath));
-routesFile = './src/router/routes.ts';
+globalRoutesPath = './src/router';
+routesFile = './src/router/index.ts';
+globalStorePath = './src/store/';
 storeFile = './src/store/index.ts';
-var importNames = [];
-var routesStream = fs.createWriteStream(routesFile);
-var storesStream = fs.createWriteStream(storeFile);
+let routeImportNames = [];
+let storeImportNames = [];
+const routesStream = fs.createWriteStream(routesFile);
+const storesStream = fs.createWriteStream(storeFile);
+
+// start route file write
 routesStream.write("import { RouteConfig } from 'vue-router';\n");
 
-// Vue store setup
+// start store file write
 storesStream.write("import Vue from 'vue';\n");
 storesStream.write("import Vuex from 'vuex';\n");
+
+for (let storeFolder of fs.readdirSync(path.resolve(globalStorePath)))
+{
+    // for each folder in ./src/store/* convert to store module
+    if (fs.statSync(path.join(path.resolve(globalStorePath), storeFolder)).isDirectory())
+    {
+        let storePath = path.join(path.resolve(globalStorePath), storeFolder, 'index.ts');
+        let importName = camelCase(storeFolder);
+        
+        // store write import
+        if (fs.existsSync(storePath))
+        {
+            storeImportNames.push(importName);
+            storesStream.write("import " + importName + 'Store' + " from \"./" + storeFolder + "\";\n");
+        }
+    }
+}
+
+if (fs.existsSync(path.join(path.resolve(globalRoutesPath), 'routes.ts')))
+{
+    let importName = 'rootGlobal';
+    routeImportNames.push(importName);
+    routesStream.write("import " + importName + 'Routes' + " from \"./routes\";\n");
+}
+
 for (let folder of fs.readdirSync(path.resolve(modulesPath)))
 {
     if (fs.statSync(path.join(path.resolve(modulesPath), folder)).isDirectory())
     {
-        var importName = camelCase(folder);
-        importNames.push(importName);
+        let modulePath = path.join(path.resolve(modulesPath), folder);
+        let routesPath = path.join(modulePath, 'routes.ts');
+        let storePath = path.join(modulePath, 'store', 'index.ts');
+        let importName = camelCase(folder);
 
         // Routes write import
-        routesStream.write("import " + importName + 'Routes' + " from \"../modules/" + folder + "/routes\";\n");
+        if (fs.existsSync(routesPath))
+        {
+            routeImportNames.push(importName);
+            routesStream.write("import " + importName + 'Routes' + " from \"../modules/" + folder + "/routes\";\n");
+        }
 
         //Store write import
-        storesStream.write("import " + importName + 'Store' + " from \"../modules/" + folder + "/store\";\n");
+        if (fs.existsSync(storePath))
+        {
+            storeImportNames.push(importName);
+            storesStream.write("import " + importName + 'Store' + " from \"../modules/" + folder + "/store\";\n");
+        }
     }
 }
 
-// Finish vue vuex init
-storesStream.write("Vue.use(Vuex);\n\n");
-
-counter = 0;
-
-//Handle Routes
-if (importNames.length > 1)
+function buildRoutes(importName, index)
 {
-    routesStream.write("const routes: Array<RouteConfig> = "+importNames[0]+ "Routes" + ".concat(");
-}
-if (importNames.length == 1)
-{
-    routesStream.write("const routes: Array<RouteConfig> = "+importNames[0]+ "Routes;");
-}
-
-// Start vuex write
-storesStream.write("export default new Vuex.Store({\n");
-storesStream.write("modules: {\n");
-
-for (let importName of importNames)
-{
-    counter++;
-
-    // Build route list
-    if (importNames.length > 1){
-        buildRoutes(importName + "Routes");
-    }
-
-    // Build store list
-    buildStores(importName);
-}
-
-// Finish routes file
-if (importNames.length > 1)
-{
-    routesStream.write(");\n");
-}
-routesStream.write("\nexport default routes;");
-routesStream.end();
-
-// Finish stores file
-storesStream.write("});");
-
-
-function buildRoutes(importName)
-{
-    if (importName == importNames[0]+ "Routes") {
+    if (importName == routeImportNames[0]+ "Routes") {
         return;
     }
-    if (counter === importNames.length)
+    if (index === routeImportNames.length)
     {
         routesStream.write(importName);
     } else
@@ -95,9 +85,9 @@ function buildRoutes(importName)
     }
 }
 
-function buildStores(importName)
+function buildStores(importName, index)
 {
-    if (counter === importNames.length)
+    if (index === storeImportNames.length)
     {
         storesStream.write(importName + ": "+importName+ "Store}\n");
     } else
@@ -105,3 +95,49 @@ function buildStores(importName)
         storesStream.write(importName + ": "+importName+ "Store,\n");
     }
 }
+
+// handle routes array
+if (routeImportNames.length > 1)
+{
+    routesStream.write("const routes: Array<RouteConfig> = "+routeImportNames[0]+ "Routes" + ".concat(");
+}
+if (routeImportNames.length == 1)
+{
+    routesStream.write("const routes: Array<RouteConfig> = "+routeImportNames[0]+ "Routes;");
+}
+
+var routeCounter = 0;
+for (let importName of routeImportNames)
+{
+    routeCounter++;
+
+    // build route list
+    if (routeImportNames.length > 1){
+        buildRoutes(importName + "Routes", routeCounter);
+    }
+}
+
+// finish routes file
+if (routeImportNames.length > 1)
+{
+    routesStream.write(");\n");
+}
+routesStream.write("\nexport default routes;");
+routesStream.end();
+
+// write vue vuex init
+storesStream.write("Vue.use(Vuex);\n\n");
+// start vuex write
+storesStream.write("export default new Vuex.Store({\n");
+storesStream.write("modules: {\n");
+
+var storeCounter = 0;
+for (let importName of storeImportNames){
+    storeCounter++;
+    // build store list
+    buildStores(importName, storeCounter);
+}
+
+// finish stores file
+storesStream.write("});");
+storesStream.end();
